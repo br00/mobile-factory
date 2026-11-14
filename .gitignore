@@ -1,0 +1,12 @@
+# Your factory's local config and runtime state
+mf.config.json
+jobs/
+.worktrees/
+.cache/
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# Personal Claude Code settings
+.claude/settings.local.json

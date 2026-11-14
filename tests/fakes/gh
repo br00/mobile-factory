@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""A tiny stand-in for the GitHub CLI, for the end-to-end test.
+
+State lives in the JSON file named by FAKE_GH_STATE. Only the calls
+mobile-factory makes are implemented.
+"""
+
+import json
+import os
+import sys
+
+FLAGS_WITHOUT_VALUE = {"--force", "--draft", "--squash", "--merge", "--rebase", "--delete-branch"}
+
+
+def parse(argv):
+    pos, opts = [], {}
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a.startswith("--") or a in ("-R",):
+            if a in FLAGS_WITHOUT_VALUE:
+                opts[a] = True
+                i += 1
+            else:
+                opts.setdefault(a, []).append(argv[i + 1])
+                i += 2
+        else:
+            pos.append(a)
+            i += 1
+    return pos, opts
+
+
+def one(opts, key, default=None):
+    return opts.get(key, [default])[-1]
+
+
+def main():
+    path = os.environ["FAKE_GH_STATE"]
+    with open(path) as f:
+        st = json.load(f)
+    st.setdefault("calls", []).append(sys.argv[1:])
+    pos, opts = parse(sys.argv[1:])
+    repo = one(opts, "-R")
+    out = None
+    code = 0
+    noun, verb = (pos + ["", ""])[:2]
+    args = pos[2:]
+
+    def issue(n):
+        return st["issues"][repo][str(n)]
+
+    if noun == "auth" and verb == "status":
+        pass
+    elif noun == "api" and verb == "user":
+        out = st["login"]
+    elif noun == "label" and verb == "create":
+        names = st.setdefault("labels", {}).setdefault(repo, [])
+        if args[0] not in names:
+            names.append(args[0])
+    elif noun == "label" and verb == "list":
+        out = [{"name": n} for n in st.get("labels", {}).get(repo, [])]
+    elif noun == "issue" and verb == "view":
+        i = issue(args[0])
+        out = {"number": int(args[0]), "title": i["title"], "body": i["body"],
+               "author": {"login": i["author"]}, "labels": [{"name": l} for l in i["labels"]],
+               "state": i["state"], "url": f"https://github.com/{repo}/issues/{args[0]}",
+               "comments": i["comments"]}
+    elif noun == "issue" and verb == "list":
+        label = one(opts, "--label")
+        out = [{"number": int(n), "title": i["title"]} for n, i in st["issues"][repo].items()
+               if i["state"] == "OPEN" and label in i["labels"]]
+    elif noun == "issue" and verb == "comment":
+        i = issue(args[0])
+        i["comments"].append({"author": {"login": st["login"]}, "body": one(opts, "--body"),
+                              "createdAt": f"2026-01-01T00:00:{len(i['comments']):02d}Z"})
+    elif noun == "issue" and verb == "edit":
+        i = issue(args[0])
+        for l in opts.get("--add-label", []):
+            if l not in i["labels"]:
+                i["labels"].append(l)
+        for l in opts.get("--remove-label", []):
+            if l in i["labels"]:
+                i["labels"].remove(l)
+    elif noun == "issue" and verb == "close":
+        i = issue(args[0])
+        i["state"] = "CLOSED"
+        i["comments"].append({"author": {"login": st["login"]}, "body": one(opts, "--comment"),
+                              "createdAt": "2026-01-02T00:00:00Z"})
+    elif noun == "pr" and verb == "create":
+        prs = st.setdefault("prs", {}).setdefault(repo, {})
+        n = len(prs) + 1
+        prs[str(n)] = {"head": one(opts, "--head"), "state": "OPEN", "isDraft": bool(opts.get("--draft")),
+                       "url": f"https://github.com/{repo}/pull/{n}"}
+        out = prs[str(n)]["url"]
+    elif noun == "pr" and verb == "list":
+        head = one(opts, "--head")
+        out = [{"number": int(n), "url": p["url"]} for n, p in st.get("prs", {}).get(repo, {}).items()
+               if p["head"] == head and p["state"] == "OPEN"]
+    elif noun == "pr" and verb == "view":
+        p = st["prs"][repo][args[0]]
+        out = {"number": int(args[0]), "url": p["url"], "state": p["state"], "isDraft": p["isDraft"]}
+    elif noun == "pr" and verb == "ready":
+        st["prs"][repo][args[0]]["isDraft"] = False
+    elif noun == "pr" and verb == "merge":
+        p = st["prs"][repo][args[0]]
+        if p["isDraft"] or p["state"] != "OPEN" or st.get("fail_merge") == repo:
+            code = 1
+            sys.stderr.write("cannot merge\n")
+        else:
+            p["state"] = "MERGED"
+    elif noun == "pr" and verb == "close":
+        st["prs"][repo][args[0]]["state"] = "CLOSED"
+    else:
+        sys.stderr.write(f"fake gh: unsupported {sys.argv[1:]}\n")
+        code = 2
+
+    with open(path, "w") as f:
+        json.dump(st, f, indent=1)
+    if out is not None:
+        print(out if isinstance(out, str) else json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == "__main__":
+    main()

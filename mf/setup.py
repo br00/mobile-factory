@@ -1,0 +1,179 @@
+"""`mf init` and `mf doctor`: getting a factory pointed at your apps."""
+
+from __future__ import annotations
+
+import json
+import re
+import shutil
+import sys
+
+from . import checks, gh
+from . import config as C
+from .util import Refused, require, run
+
+LABELS = {
+    "queue": ("0E8A16", "mobile-factory: build this"),
+    "needs_info": ("FBCA04", "mobile-factory: waiting for the author"),
+    "needs_human": ("D93F0B", "mobile-factory: waiting for the operator"),
+}
+
+
+def parse_target(spec: str, flag: str):
+    repo, sep, path = spec.partition("=")
+    require(sep and re.fullmatch(r"[\w.-]+/[\w.-]+", repo) and path,
+            f"{flag} wants OWNER/REPO=PATH, e.g. {flag} acme/app-ios=../app-ios")
+    return repo, path
+
+
+def init(a) -> None:
+    require(not C.CONFIG_PATH.exists() or a.force, "mf.config.json exists; pass --force to overwrite it")
+    require(re.fullmatch(r"[\w.-]+/[\w.-]+", a.issues), "--issues wants OWNER/REPO")
+    require(a.ios or a.android, "name at least one app: --ios and/or --android")
+    cfg = json.loads(C.EXAMPLE_PATH.read_text())
+    cfg.pop("//", None)
+    cfg["issues_repo"] = a.issues
+    for name, spec in (("ios", a.ios), ("android", a.android)):
+        if spec is None:
+            cfg["targets"].pop(name)
+            cfg["merge_order"] = [t for t in cfg["merge_order"] if t != name]
+            continue
+        repo, path = parse_target(spec, f"--{name}")
+        cfg["targets"][name]["repo"] = repo
+        cfg["targets"][name]["path"] = path
+    C.validate(cfg)
+    C.CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
+    print(f"wrote {C.CONFIG_PATH}")
+    for key, (color, desc) in LABELS.items():
+        name = cfg["labels"][key]
+        gh.gh("label", "create", name, "-R", a.issues, "--force", "--color", color, "--description", desc)
+        print(f"label {name} ready in {a.issues}")
+    print("\nnext:")
+    if "ios" in cfg["targets"]:
+        print("  - set targets.ios.env (MF_SCHEME, MF_PROJECT or MF_WORKSPACE, MF_DESTINATION)")
+    if "android" in cfg["targets"]:
+        print("  - set targets.android.env.MF_GRADLE_TASKS to your lint + unit test + build tasks")
+    print("  - run bin/mf doctor --checks")
+
+
+class Report:
+    def __init__(self):
+        self.failed = False
+
+    def ok(self, msg):
+        print(f"  ok    {msg}")
+
+    def warn(self, msg):
+        print(f"  warn  {msg}")
+
+    def fail(self, msg):
+        print(f"  FAIL  {msg}")
+        self.failed = True
+
+    def tool(self, name, needed=True, why=""):
+        if shutil.which(name):
+            self.ok(f"{name} found")
+        elif needed:
+            self.fail(f"{name} not found{': ' + why if why else ''}")
+        else:
+            self.warn(f"{name} not found{': ' + why if why else ''}")
+
+
+def same_repo(url: str, repo: str) -> bool:
+    m = re.search(r"github\.com[:/]([\w.-]+/[\w.-]+?)(?:\.git)?/?$", url.strip())
+    return bool(m) and m.group(1).lower() == repo.lower()
+
+
+def doctor(run_checks: bool) -> int:
+    r = Report()
+    print("tools")
+    if sys.version_info >= (3, 9):
+        r.ok(f"python {sys.version.split()[0]}")
+    else:
+        r.fail("python 3.9 or later is required")
+    r.tool("git")
+    r.tool("gh", why="install the GitHub CLI and run `gh auth login`")
+    r.tool("claude", needed=False, why="Claude Code runs the /mf skill")
+    r.tool("maestro", needed=False, why="needed for the full gate (flow.yaml), not for the fast gate")
+    if shutil.which("gh") and run(["gh", "auth", "status"], check=False).returncode != 0:
+        r.fail("gh isn't signed in: run `gh auth login`")
+
+    print("config")
+    try:
+        cfg = C.load()
+        r.ok(f"{C.CONFIG_PATH.name} is valid ({', '.join(cfg['targets'])})")
+    except Refused as e:
+        r.fail(str(e))
+        return 1
+
+    print(f"issues repo {cfg['issues_repo']}")
+    try:
+        names = {l["name"] for l in gh.gh_json("label", "list", "-R", cfg["issues_repo"],
+                                               "--limit", "200", "--json", "name")}
+        r.ok("reachable")
+        for key, name in cfg["labels"].items():
+            (r.ok if name in names else r.fail)(f"label {name}" + ("" if name in names else " missing: run bin/mf init"))
+    except Refused as e:
+        r.fail(f"can't read it: {e}")
+
+    for t, tc in cfg["targets"].items():
+        print(f"target {t} ({tc['repo']})")
+        clone = C.target_path(cfg, t)
+        if not (clone / ".git").exists():
+            r.fail(f"{clone} isn't a git clone: clone {tc['repo']} there or fix targets.{t}.path")
+            continue
+        r.ok(f"clone at {clone}")
+        url = run(["git", "remote", "get-url", "origin"], cwd=clone, check=False).stdout
+        if same_repo(url, tc["repo"]):
+            r.ok("origin matches")
+        else:
+            r.fail(f"origin is {url.strip() or 'missing'}, expected {tc['repo']}")
+        heads = run(["git", "ls-remote", "--heads", "origin", tc["base"]], cwd=clone, check=False).stdout
+        (r.ok if heads.strip() else r.fail)(f"base branch {tc['base']} " + ("exists" if heads.strip() else "not found on origin"))
+        script = C.checks_script(tc)
+        (r.ok if script.exists() else r.fail)(f"checks script {tc['checks']}")
+        if t == "ios":
+            r.tool("xcodebuild", why="install Xcode")
+            r.tool("swiftlint", needed=False, why="lint runs only when the app has .swiftlint.yml")
+            if not tc.get("env", {}).get("MF_SCHEME"):
+                r.fail("targets.ios.env.MF_SCHEME isn't set")
+            if (clone / "project.yml").exists() or (clone / "Project.swift").exists():
+                r.ok("generated Xcode project (XcodeGen/Tuist): agents edit the spec, not project.pbxproj")
+            elif any("PBXFileSystemSynchronizedRootGroup" in p.read_text(errors="ignore")
+                     for p in clone.glob("*.xcodeproj/project.pbxproj")):
+                r.ok("Xcode synchronized folders: new files need no project.pbxproj edits")
+            else:
+                r.warn("classic Xcode groups: every new file means a project.pbxproj edit. "
+                       "Consider converting to synchronized folders (Xcode 16) or XcodeGen/Tuist.")
+        if t == "android":
+            r.tool("java", why="a JDK is needed for Gradle")
+            (r.ok if (clone / "gradlew").exists() else r.fail)("gradlew in the clone")
+            r.tool("adb", needed=False, why="needed for the full gate on an emulator")
+        if run_checks:
+            run_base_checks(cfg, t, tc, clone, r)
+    print()
+    print("doctor: " + ("problems found" if r.failed else "all good"))
+    return 1 if r.failed else 0
+
+
+def run_base_checks(cfg, t, tc, clone, r) -> None:
+    """Run the target's checks on a throwaway worktree of its base branch."""
+    wt = C.CACHE / "doctor" / t / "worktree"
+    if wt.exists():
+        run(["git", "worktree", "remove", "--force", str(wt)], cwd=clone, check=False)
+    wt.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        run(["git", "fetch", "origin", tc["base"]], cwd=clone)
+        run(["git", "worktree", "add", "--detach", str(wt), f"origin/{tc['base']}"], cwd=clone)
+        print(f"  ...   running {tc['checks']} on origin/{tc['base']} (this can take minutes)")
+        res = checks.execute(tc, t, str(wt), C.CACHE / "doctor" / t / "cache", "doctor")
+        log = C.CACHE / "doctor" / f"{t}.log"
+        log.write_text(res["log"])
+        if res["ok"]:
+            r.ok(f"checks pass on {tc['base']} in {res['seconds']}s")
+        else:
+            r.fail(f"checks fail on {tc['base']} (exit {res['code']}); the factory can't judge branches "
+                   f"until they pass. Log: {log}")
+    except Refused as e:
+        r.fail(str(e))
+    finally:
+        run(["git", "worktree", "remove", "--force", str(wt)], cwd=clone, check=False)

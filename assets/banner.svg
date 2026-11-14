@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="t d">
+  <title id="t">mobile-factory</title>
+  <desc id="d">A factory takes in a GitHub issue and sends out an iOS phone and an Android phone on a conveyor belt.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1120"/>
+      <stop offset="1" stop-color="#1A2547"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B3A55"/>
+      <stop offset="1" stop-color="#1C2740"/>
+    </linearGradient>
+    <linearGradient id="ios" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B9BFF"/>
+      <stop offset="1" stop-color="#0A6CF0"/>
+    </linearGradient>
+    <linearGradient id="droid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5BE89A"/>
+      <stop offset="1" stop-color="#22B86A"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#F59E0B" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#F59E0B" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#FFFFFF" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="400" rx="28" fill="url(#bg)"/>
+  <rect width="1280" height="400" rx="28" fill="url(#grid)"/>
+
+  <!-- smoke -->
+  <g fill="#CBD5E1">
+    <circle cx="352" cy="78" r="11" opacity="0.30"/>
+    <circle cx="368" cy="56" r="15" opacity="0.20"/>
+    <circle cx="392" cy="34" r="19" opacity="0.12"/>
+  </g>
+
+  <!-- factory -->
+  <ellipse cx="260" cy="230" rx="170" ry="110" fill="url(#glow)"/>
+  <rect x="336" y="88" width="30" height="74" rx="4" fill="#24324D" stroke="#3E5175" stroke-width="2"/>
+  <rect x="332" y="84" width="38" height="10" rx="3" fill="#3E5175"/>
+  <path d="M148 300 V178 L204 140 V178 L260 140 V178 L316 140 V178 L372 140 V300 Z"
+        fill="url(#wall)" stroke="#3E5175" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- roof glass -->
+  <g fill="#F59E0B" opacity="0.9">
+    <path d="M160 176 L198 150 V176 Z"/>
+    <path d="M216 176 L254 150 V176 Z"/>
+    <path d="M272 176 L310 150 V176 Z"/>
+    <path d="M328 176 L366 150 V176 Z"/>
+  </g>
+  <!-- windows -->
+  <g fill="#FBBF24">
+    <rect x="170" y="200" width="26" height="18" rx="3" opacity="0.95"/>
+    <rect x="324" y="200" width="26" height="18" rx="3" opacity="0.95"/>
+    <rect x="170" y="232" width="26" height="18" rx="3" opacity="0.55"/>
+    <rect x="324" y="232" width="26" height="18" rx="3" opacity="0.55"/>
+  </g>
+  <!-- loading bays: issue in on the left, apps out on the right -->
+  <rect x="148" y="252" width="30" height="48" fill="#0B1120"/>
+  <rect x="216" y="212" width="88" height="88" rx="6" fill="#0B1120" stroke="#3E5175" stroke-width="2"/>
+  <g stroke="#3E5175" stroke-width="2">
+    <line x1="216" y1="228" x2="304" y2="228"/>
+    <line x1="216" y1="244" x2="304" y2="244"/>
+  </g>
+  <!-- the claude spark over the door -->
+  <g transform="translate(260 192)" fill="#F97316">
+    <path d="M0 -12 L3 -3 L12 0 L3 3 L0 12 L-3 3 L-12 0 L-3 -3 Z"/>
+  </g>
+
+  <!-- conveyor -->
+  <rect x="40" y="300" width="560" height="16" rx="8" fill="#334155"/>
+  <g fill="#0B1120" stroke="#64748B" stroke-width="2">
+    <circle cx="64" cy="308" r="5"/><circle cx="124" cy="308" r="5"/><circle cx="184" cy="308" r="5"/>
+    <circle cx="244" cy="308" r="5"/><circle cx="304" cy="308" r="5"/><circle cx="364" cy="308" r="5"/>
+    <circle cx="424" cy="308" r="5"/><circle cx="484" cy="308" r="5"/><circle cx="544" cy="308" r="5"/>
+  </g>
+  <rect x="40" y="322" width="560" height="4" rx="2" fill="#1E293B"/>
+
+  <!-- issue card going in -->
+  <g transform="translate(64 226) rotate(-4)">
+    <rect width="62" height="72" rx="8" fill="#F8FAFC"/>
+    <circle cx="16" cy="18" r="7" fill="none" stroke="#16A34A" stroke-width="3"/>
+    <circle cx="16" cy="18" r="2" fill="#16A34A"/>
+    <text x="28" y="24" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700" fill="#0F172A">#12</text>
+    <rect x="10" y="36" width="42" height="5" rx="2.5" fill="#CBD5E1"/>
+    <rect x="10" y="47" width="34" height="5" rx="2.5" fill="#CBD5E1"/>
+    <rect x="10" y="58" width="38" height="5" rx="2.5" fill="#CBD5E1"/>
+  </g>
+
+  <!-- iOS phone coming out -->
+  <g transform="translate(404 196)">
+    <rect width="58" height="104" rx="14" fill="url(#ios)"/>
+    <rect x="4" y="4" width="50" height="96" rx="11" fill="#0B1120"/>
+    <rect x="19" y="9" width="20" height="6" rx="3" fill="#1E293B"/>
+    <rect x="11" y="26" width="36" height="8" rx="4" fill="#3B9BFF" opacity="0.9"/>
+    <rect x="11" y="40" width="28" height="6" rx="3" fill="#475569"/>
+    <rect x="11" y="52" width="36" height="22" rx="5" fill="#1E3A8A"/>
+    <circle cx="40" cy="86" r="7" fill="#3B9BFF"/>
+  </g>
+  <!-- Android phone coming out -->
+  <g transform="translate(486 202)">
+    <rect width="54" height="98" rx="10" fill="url(#droid)"/>
+    <rect x="4" y="4" width="46" height="90" rx="7" fill="#0B1120"/>
+    <circle cx="27" cy="11" r="3" fill="#1E293B"/>
+    <rect x="10" y="22" width="34" height="8" rx="2" fill="#5BE89A" opacity="0.9"/>
+    <rect x="10" y="36" width="26" height="6" rx="2" fill="#475569"/>
+    <rect x="10" y="48" width="34" height="22" rx="4" fill="#14532D"/>
+    <rect x="28" y="76" width="16" height="12" rx="4" fill="#5BE89A"/>
+  </g>
+  <!-- parity link -->
+  <path d="M462 182 Q 487 162 513 188" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-dasharray="4 5" stroke-linecap="round"/>
+  <g transform="translate(487 168)">
+    <circle r="11" fill="#0B1120" stroke="#E2E8F0" stroke-width="2"/>
+    <path d="M-5 -2 H5 M-5 3 H5" stroke="#E2E8F0" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="660" y="190" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="78" font-weight="800" letter-spacing="-2" fill="#F8FAFC">mobile<tspan fill="#F97316">·</tspan>factory</text>
+  <text x="663" y="240" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="28" font-weight="500" fill="#94A3B8">One issue in. Two native apps out.</text>
+
+  <!-- chips -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600">
+    <rect x="663" y="276" width="120" height="36" rx="18" fill="#0A6CF0" fill-opacity="0.18" stroke="#3B9BFF" stroke-opacity="0.6"/>
+    <text x="723" y="300" text-anchor="middle" fill="#93C5FD">SwiftUI</text>
+    <rect x="795" y="276" width="190" height="36" rx="18" fill="#22B86A" fill-opacity="0.16" stroke="#5BE89A" stroke-opacity="0.6"/>
+    <text x="890" y="300" text-anchor="middle" fill="#86EFAC">Jetpack Compose</text>
+    <rect x="997" y="276" width="160" height="36" rx="18" fill="#F97316" fill-opacity="0.16" stroke="#F97316" stroke-opacity="0.6"/>
+    <text x="1077" y="300" text-anchor="middle" fill="#FDBA74">Claude Code</text>
+  </g>
+</svg>

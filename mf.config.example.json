@@ -1,0 +1,62 @@
+{
+  "//": "Copied to mf.config.json by `bin/mf init`. Every key is explained in README.md.",
+  "issues_repo": "your-org/your-product",
+  "concurrency": 1,
+  "max_rounds": 3,
+  "max_gate_attempts": 3,
+  "auto_merge": false,
+  "merge_method": "squash",
+  "merge_order": ["ios", "android"],
+  "labels": {
+    "queue": "mobile-factory",
+    "needs_info": "mf:needs-info",
+    "needs_human": "mf:needs-human"
+  },
+  "targets": {
+    "ios": {
+      "repo": "your-org/app-ios",
+      "path": "../app-ios",
+      "base": "main",
+      "checks": "targets/ios/fast.sh",
+      "env": {
+        "MF_SCHEME": "App",
+        "MF_PROJECT": "App.xcodeproj",
+        "MF_WORKSPACE": "",
+        "MF_DESTINATION": "platform=iOS Simulator,name=iPhone 16"
+      },
+      "protected_paths": [
+        "*.entitlements",
+        "*ExportOptions*.plist",
+        "*Signing*.xcconfig",
+        "fastlane/*",
+        ".github/*"
+      ]
+    },
+    "android": {
+      "repo": "your-org/app-android",
+      "path": "../app-android",
+      "base": "main",
+      "checks": "targets/android/fast.sh",
+      "env": {
+        "MF_GRADLE_TASKS": "lintDebug testDebugUnitTest assembleDebug"
+      },
+      "protected_paths": [
+        "*.jks",
+        "*.keystore",
+        "keystore.properties",
+        "fastlane/*",
+        ".github/*"
+      ]
+    }
+  },
+  "routing": {
+    "code": { "low": "haiku", "medium": "sonnet", "high": "sonnet" },
+    "parity": "sonnet",
+    "surfaces": {
+      "ui": { "ui": "haiku", "a11y": "sonnet" },
+      "security": { "security": "opus" },
+      "store": { "store": "sonnet" },
+      "native": {}
+    }
+  }
+}
