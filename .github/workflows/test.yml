@@ -6,19 +6,20 @@ on:
   pull_request:
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            python: "3.9"
-          - os: macos-latest
-            python: "3.12"
+  macos-system-python:
+    # The python3 that ships with macOS is what most users run bin/mf with.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: /usr/bin/python3 --version
+      - run: bash -n targets/ios/fast.sh && bash -n targets/android/fast.sh
+      - run: /usr/bin/python3 -m unittest discover -s tests -v
+
+  linux:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
-      - run: bash -n targets/ios/fast.sh && bash -n targets/android/fast.sh
+          python-version: "3.12"
       - run: python -m unittest discover -s tests -v
