@@ -10,7 +10,8 @@
   "labels": {
     "queue": "mobile-factory",
     "needs_info": "mf:needs-info",
-    "needs_human": "mf:needs-human"
+    "needs_human": "mf:needs-human",
+    "suggested": "mf:suggested"
   },
   "targets": {
     "ios": {

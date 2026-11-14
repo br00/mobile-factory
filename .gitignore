@@ -1,5 +1,6 @@
 # Your factory's local config and runtime state
 mf.config.json
+profiles/
 jobs/
 .worktrees/
 .cache/

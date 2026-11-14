@@ -28,6 +28,36 @@ hand you both PRs to merge together.
 Every arrow is a decision made by one tested CLI, `bin/mf`, never by a prompt.
 Agents do the judgment calls; scripts decide the facts.
 
+## It learns your app first
+
+Before it builds anything, `/mf survey` sends a **surveyor** into each app
+and a **parity surveyor** across both:
+
+```text
+> /mf survey
+survey: profiles written for ios, android and parity
+config: ios: MF_SCHEME 'App' -> 'Shop'
+config: android: MF_GRADLE_TASKS 'lintDebug testDebugUnitTest assembleDebug' -> 'ktlintCheck lintDebug testDebugUnitTest assembleDebug'
+suggestions: 9 filed as mf:suggested
+  https://github.com/acme/shop-factory/issues/31
+  https://github.com/acme/shop-factory/issues/32
+  ...
+```
+
+- **House rules.** `profiles/ios.md` and `profiles/android.md` describe how
+  each app is really built: architecture, state and data, design system,
+  conventions, tests, and the patterns to copy, with real paths. Every agent
+  reads them before every job, reviewers flag code that breaks them, and you
+  can edit them.
+- **Parity map.** `profiles/parity.md` is a feature-by-feature comparison of
+  the two apps, plus a shared vocabulary, so specs use one word for one
+  thing.
+- **Build facts.** The scheme, simulator and Gradle tasks it finds go
+  straight into `mf.config.json`.
+- **Suggestions you control.** Parity gaps, factory blockers and quality
+  fixes are filed as issues labeled `mf:suggested`. Nothing runs until you
+  add the `mobile-factory` label to the ones you want.
+
 ## What makes it mobile
 
 |  | |
@@ -91,8 +121,13 @@ $EDITOR mf.config.json
 bin/mf doctor --checks
 ```
 
-Then open Claude Code in the factory folder, label an issue
-`mobile-factory`, and:
+Then open Claude Code in the factory folder and let it learn your apps:
+
+```
+/mf survey         profile both apps, fill in the build config, suggest issues
+```
+
+Label an issue `mobile-factory` (or promote one of the suggestions), and:
 
 ```
 /mf run            work every labeled issue (and resume anything unfinished)
@@ -117,6 +152,8 @@ either app, or a separate product repo. Building only one app? Pass only
 
 | agent | model | job |
 |---|---|---|
+| 🧭 `surveyor` | opus | studies one app; writes its house rules and suggestions (run by `/mf survey`) |
+| 🔀 `surveyor-parity` | opus | compares both apps feature by feature; suggests issues for the gaps |
 | 🚪 `intake` | opus | ACCEPT, NEEDS-INFO or REJECT; picks platforms; rates risk and surfaces. No shell. |
 | 📐 `spec-writer` | opus | `spec.md` (behaviour, acceptance criteria, ids, strings, per-platform notes) and `flow.yaml` |
 | 🛠️ `builder-ios` | opus | SwiftUI code, unit tests, the draft PR. Resumed across rounds. |
@@ -146,7 +183,7 @@ Haiku reviews, not seven.
 | `max_gate_attempts` | check failures allowed per platform per round |
 | `auto_merge` | `false` (default): approved jobs wait for `/mf merge`. `true`: APPROVE merges straight away |
 | `merge_method`, `merge_order` | how and in which order the two PRs merge |
-| `labels` | the queue label and the two "parked" labels |
+| `labels` | the queue label, the two "parked" labels, and the label for survey suggestions |
 | `targets.<t>.repo / path / base` | app repo, local clone, base branch |
 | `targets.<t>.checks`, `.env` | the checks script the gate runs, and its variables (scheme, simulator, Gradle tasks) |
 | `targets.<t>.protected_paths` | globs a branch may not modify or delete |
@@ -174,6 +211,8 @@ Keep them non-interactive, and never let them rewrite files.
 ## Roadmap
 
 - [x] State machine with per-platform tracks, fast gates, routed reviewers, paired merge
+- [x] **Survey**: house-rules profiles, a parity map, auto-filled build config, suggested issues
+- [ ] **New-app mode**: start from a brief, scaffold both repos (XcodeGen/Tuist + Gradle, shared tokens, CI), then hand over to the normal pipeline
 - [ ] **Device pool**: leased simulators and emulators, so `concurrency` can go above 1
 - [ ] **Full gate**: run `flow.yaml` with Maestro on both platforms, with screenshots per round
 - [ ] **Preview builds**: Firebase App Distribution / TestFlight / Play internal testing links on the issue

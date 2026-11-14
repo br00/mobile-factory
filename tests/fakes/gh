@@ -69,6 +69,12 @@ def main():
         label = one(opts, "--label")
         out = [{"number": int(n), "title": i["title"]} for n, i in st["issues"][repo].items()
                if i["state"] == "OPEN" and label in i["labels"]]
+    elif noun == "issue" and verb == "create":
+        issues = st["issues"].setdefault(repo, {})
+        n = max([int(k) for k in issues] or [0]) + 1
+        issues[str(n)] = {"title": one(opts, "--title"), "body": one(opts, "--body"), "author": st["login"],
+                          "labels": list(opts.get("--label", [])), "state": "OPEN", "comments": []}
+        out = f"https://github.com/{repo}/issues/{n}"
     elif noun == "issue" and verb == "comment":
         i = issue(args[0])
         i["comments"].append({"author": {"login": st["login"]}, "body": one(opts, "--body"),

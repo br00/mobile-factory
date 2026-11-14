@@ -286,6 +286,71 @@ class Pipeline(unittest.TestCase):
         self.assertIn("follow the system by default",
                       (self.home / "jobs" / job / "issue.md").read_text())
 
+    def test_survey_profiles_config_and_suggestions(self):
+        def profile(name, text):
+            time.sleep(0.02)
+            (self.home / "profiles" / name).write_text(text)
+
+        out = [json.loads(l) for l in self.mf("survey").stdout.splitlines()]
+        self.assertEqual(sorted(a["name"] for a in out), ["surveyor-android", "surveyor-ios"])
+        self.assertIn("Your target: ios", [a for a in out if a["name"] == "surveyor-ios"][0]["prompt"])
+        self.assertTrue((self.home / ".worktrees" / "survey-ios" / "README.md").exists())
+        self.mf("survey", "finish", ok=False)  # nothing written yet
+
+        profile("ios.md", "TARGET: ios\nREVISION: abc\nSCHEME: Shop\nPROJECT: Shop.xcodeproj\nWORKSPACE: none\n"
+                          "DESTINATION: platform=iOS Simulator,name=iPhone 16 Pro\nPROJECT_STYLE: synchronized\n\n"
+                          "# Shop (iOS): house rules\n\n## House rules\n1. Use @Observable.\n")
+        profile("ios.suggestions.md", "## Suggestion: Add unit tests for CartViewModel\nKIND: quality\n"
+                                      "PLATFORMS: ios\nRISK: low\n\nCartViewModel has no tests.\n")
+        # android still missing: survey next asks only for it
+        out = [json.loads(l) for l in self.mf("survey", "next").stdout.splitlines()]
+        self.assertEqual([a["name"] for a in out], ["surveyor-android"])
+        profile("android.md", "TARGET: android\nREVISION: def\nGRADLE_TASKS: ktlintCheck testDebugUnitTest assembleDebug\n\n"
+                              "# Shop (Android): house rules\n")
+        profile("android.suggestions.md", "# Suggestions\n\nNone worth filing.\n")
+        out = [json.loads(l) for l in self.mf("survey", "next").stdout.splitlines()]
+        self.assertEqual([a["name"] for a in out], ["surveyor-parity"])
+        profile("parity.md", "# Parity notes\n")
+        profile("parity.suggestions.md", "## Suggestion: Add pull-to-refresh to the iOS feed\nKIND: parity\n"
+                                         "PLATFORMS: ios\nRISK: low\n\nAndroid has it in FeedScreen.kt.\n")
+        out = [json.loads(l) for l in self.mf("survey", "next").stdout.splitlines()]
+        self.assertEqual(out, [{"do": "run", "job": "survey", "cmd": "bin/mf survey finish"}])
+
+        res = self.mf("survey", "finish").stdout
+        self.assertIn("2 filed as mf:suggested", res)
+        cfg = json.loads((self.home / "mf.config.json").read_text())
+        self.assertEqual(cfg["targets"]["ios"]["env"]["MF_SCHEME"], "Shop")
+        self.assertEqual(cfg["targets"]["ios"]["env"]["MF_PROJECT"], "Shop.xcodeproj")
+        self.assertEqual(cfg["targets"]["ios"]["env"]["MF_WORKSPACE"], "")  # "none" isn't copied
+        self.assertEqual(cfg["targets"]["android"]["env"]["MF_GRADLE_TASKS"],
+                         "ktlintCheck testDebugUnitTest assembleDebug")
+        issues = self.gh()["issues"]["acme/product"]
+        filed = {i["title"]: i for i in issues.values() if "mf:suggested" in i["labels"]}
+        self.assertEqual(set(filed), {"Add unit tests for CartViewModel", "Add pull-to-refresh to the iOS feed"})
+        self.assertNotIn("mobile-factory", filed["Add pull-to-refresh to the iOS feed"]["labels"])
+        self.assertIn("add the `mobile-factory` label", filed["Add pull-to-refresh to the iOS feed"]["body"])
+        self.assertFalse((self.home / ".worktrees" / "survey-ios").exists())
+        self.mf("survey", "finish", ok=False)  # already finished
+
+        # suggested issues never enter the queue on their own
+        rows = [json.loads(l) for l in self.mf("queue").stdout.splitlines()]
+        self.assertEqual([r["issue"] for r in rows], [1])
+
+        # agents get the house rules in their brief
+        job = self.mf("new", "1").stdout.strip()
+        prompt = self.next(job)[0]["prompt"]
+        self.assertIn(f"ios house rules: {self.home.resolve() / 'profiles' / 'ios.md'}", prompt)
+        self.assertIn("Parity notes:", prompt)
+
+        # a second survey doesn't file duplicates
+        self.mf("survey")
+        for name in ("ios.md", "ios.suggestions.md", "android.md", "android.suggestions.md",
+                     "parity.md", "parity.suggestions.md"):
+            p = self.home / "profiles" / name
+            profile(name, p.read_text())
+        res = self.mf("survey", "finish").stdout
+        self.assertIn("0 filed as mf:suggested, 2 already open", res)
+
     def test_guard_hook(self):
         def guard(role, path):
             return subprocess.run(MF + ["hook", "guard", role], env=self.env, capture_output=True, text=True,

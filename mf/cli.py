@@ -197,6 +197,11 @@ def brief(job: jobs.Job, target=None, task=None) -> str:
     else:
         for t in cfg()["targets"]:
             lines.append(f"{t} code (read only): {C.target_path(cfg(), t)}")
+    for t in (job.tracks or cfg()["targets"]):
+        if (C.PROFILES / f"{t}.md").exists():
+            lines.append(f"{t} house rules: {C.PROFILES / f'{t}.md'}")
+    if (C.PROFILES / "parity.md").exists():
+        lines.append(f"Parity notes: {C.PROFILES / 'parity.md'}")
     if target:
         lines.append(f"Your target: {target}")
     if task:
@@ -677,6 +682,172 @@ def check(job: jobs.Job, target: str) -> None:
     sys.exit(0 if result["ok"] else 1)
 
 
+# ---- Survey: learn each app before building in it ---------------------------
+
+SURVEY_STATE = C.PROFILES / ".survey.json"
+# Build facts a profile reports, and the checks-script variable each one fills in.
+FACTS = {
+    "ios": {"SCHEME": "MF_SCHEME", "PROJECT": "MF_PROJECT", "WORKSPACE": "MF_WORKSPACE",
+            "DESTINATION": "MF_DESTINATION"},
+    "android": {"GRADLE_TASKS": "MF_GRADLE_TASKS"},
+}
+EMPTY_FACT = {"", "none", "-", "n/a", "unknown"}
+
+
+def survey_files(targets: list) -> list:
+    names = [f"{t}.md" for t in targets] + [f"{t}.suggestions.md" for t in targets]
+    if len(targets) > 1:
+        names += ["parity.md", "parity.suggestions.md"]
+    return [C.PROFILES / n for n in names]
+
+
+def load_survey() -> dict:
+    require(SURVEY_STATE.exists(), "no survey started: run `bin/mf survey`")
+    return json.loads(SURVEY_STATE.read_text())
+
+
+def save_survey(st: dict) -> None:
+    SURVEY_STATE.write_text(json.dumps(st, indent=2) + "\n")
+
+
+def survey_worktree(t: str) -> Path:
+    return C.WORKTREES / f"survey-{t}"
+
+
+def survey_brief(st: dict, target=None) -> str:
+    lines = ["Mobile factory survey.", f"Factory root: {C.ROOT}", f"Profiles folder: {C.PROFILES}/"]
+    for t in st["targets"]:
+        tc = cfg()["targets"][t]
+        lines.append(f"{t} code (read only): {survey_worktree(t)} (repo {tc['repo']}, "
+                     f"origin/{tc['base']} at {st['revisions'][t][:9]})")
+    if target:
+        lines.append(f"Your target: {target}")
+        lines.append(f"Write: profiles/{target}.md and profiles/{target}.suggestions.md")
+    else:
+        lines.append("Write: profiles/parity.md and profiles/parity.suggestions.md")
+    return "\n".join(lines)
+
+
+def survey_next_actions(st: dict) -> list:
+    if st.get("done"):
+        return [{"do": "done", "job": "survey"}]
+    since = st["started"]
+    acts = []
+    pending = [t for t in st["targets"]
+               if not (fresh(C.PROFILES / f"{t}.md", since) and fresh(C.PROFILES / f"{t}.suggestions.md", since))]
+    for t in pending:
+        acts.append({"do": "spawn", "job": "survey", "agent": "surveyor", "name": f"surveyor-{t}",
+                     "model": None, "prompt": survey_brief(st, t)})
+    if pending:
+        return acts
+    parity_done = fresh(C.PROFILES / "parity.md", since) and fresh(C.PROFILES / "parity.suggestions.md", since)
+    if len(st["targets"]) > 1 and not parity_done:
+        return [{"do": "spawn", "job": "survey", "agent": "surveyor-parity", "name": "surveyor-parity",
+                 "model": None, "prompt": survey_brief(st)}]
+    return [{"do": "run", "job": "survey", "cmd": "bin/mf survey finish"}]
+
+
+def survey_start(targets_arg) -> None:
+    known = list(cfg()["targets"])
+    targets = rules.targets_in(targets_arg, known, "--targets") if targets_arg else known
+    require(targets, "survey needs at least one target")
+    C.PROFILES.mkdir(exist_ok=True)
+    revisions = {}
+    for t in targets:
+        tc, clone, wt = cfg()["targets"][t], C.target_path(cfg(), t), survey_worktree(t)
+        require((clone / ".git").exists(), f"{t}: {clone} isn't a git clone (targets.{t}.path)")
+        run(["git", "fetch", "origin", tc["base"]], cwd=clone)
+        if wt.exists():
+            run(["git", "worktree", "remove", "--force", str(wt)], cwd=clone, check=False)
+        wt.parent.mkdir(parents=True, exist_ok=True)
+        run(["git", "worktree", "add", "--detach", str(wt), f"origin/{tc['base']}"], cwd=clone)
+        revisions[t] = run(["git", "rev-parse", "HEAD"], cwd=wt).stdout.strip()
+    st = {"started": time.time(), "targets": targets, "revisions": revisions, "done": False}
+    save_survey(st)
+    for act in survey_next_actions(st):
+        emit(act)
+
+
+def apply_facts(st: dict) -> list:
+    """Copy the build facts the profiles report into mf.config.json targets.<t>.env."""
+    raw = json.loads(C.CONFIG_PATH.read_text())
+    changes = []
+    for t in st["targets"]:
+        h = rules.parse_profile((C.PROFILES / f"{t}.md").read_text(), t)
+        env = raw["targets"][t].setdefault("env", {})
+        for fact, var in FACTS.get(t, {}).items():
+            value = h.get(fact, "").strip()
+            if value.lower() in EMPTY_FACT or env.get(var) == value:
+                continue
+            changes.append(f"{t}: {var} {env.get(var)!r} -> {value!r}")
+            env[var] = value
+    if changes:
+        C.validate(raw)
+        C.CONFIG_PATH.write_text(json.dumps(raw, indent=2) + "\n")
+        global _cfg
+        _cfg = None
+    return changes
+
+
+def survey_finish(no_issues: bool) -> None:
+    st = load_survey()
+    require(not st.get("done"), "this survey is already finished; run `bin/mf survey` to start a new one")
+    stale = [p.name for p in survey_files(st["targets"]) if not fresh(p, st["started"])]
+    require(not stale, f"these survey files haven't been written yet: {', '.join(stale)}")
+
+    suggestions = []
+    for f in [p for p in survey_files(st["targets"]) if p.name.endswith(".suggestions.md")]:
+        try:
+            suggestions += rules.parse_suggestions(f.read_text(), st["targets"])
+        except Refused as e:
+            raise Refused(f"profiles/{f.name}: {e}")
+    changes = apply_facts(st)
+
+    filed, skipped = [], []
+    if not no_issues and suggestions:
+        repo, label = issues_repo(), labels().get("suggested", "mf:suggested")
+        gh.ensure_label(repo, label, "C5DEF5", "mobile-factory: suggested by the survey; add the queue label to build it")
+        existing = {i["title"].strip().lower() for i in gh.labeled_issues(repo, label)}
+        revs = ", ".join(f"{t} {r[:9]}" for t, r in st["revisions"].items())
+        for s in suggestions:
+            if s["title"].strip().lower() in existing:
+                skipped.append(s["title"])
+                continue
+            text = (f"{s['body']}\n\n---\n**Kind:** {s['kind']} · **Platforms:** {', '.join(s['platforms'])} · "
+                    f"**Risk:** {s['risk']}\n\nSuggested by the mobile-factory survey ({revs}). "
+                    f"To build it, add the `{labels()['queue']}` label.")
+            filed.append(gh.create_issue(repo, s["title"], text, label))
+            existing.add(s["title"].strip().lower())
+
+    for t in st["targets"]:
+        clone = C.target_path(cfg(), t)
+        run(["git", "worktree", "remove", "--force", str(survey_worktree(t))], cwd=clone, check=False)
+    st.update(done=True, finished=now_iso(), filed=filed, config_changes=changes)
+    save_survey(st)
+
+    print(f"survey: profiles written for {', '.join(st['targets'])}"
+          + (" and parity" if len(st["targets"]) > 1 else ""))
+    for c in changes:
+        print(f"config: {c}")
+    if no_issues:
+        print(f"suggestions: {len(suggestions)} found, not filed (--no-issues)")
+    else:
+        print(f"suggestions: {len(filed)} filed as {labels().get('suggested', 'mf:suggested')}"
+              + (f", {len(skipped)} already open" if skipped else ""))
+        for url in filed:
+            print(f"  {url}")
+
+
+def survey(step: str, targets_arg, no_issues: bool) -> None:
+    if step == "start":
+        survey_start(targets_arg)
+    elif step == "next":
+        for act in survey_next_actions(load_survey()):
+            emit(act)
+    else:
+        survey_finish(no_issues)
+
+
 # ---- Hooks ------------------------------------------------------------------
 
 WRITE_SCOPES = {
@@ -685,6 +856,7 @@ WRITE_SCOPES = {
     "builder": [".worktrees/*", "jobs/*/build-*.md"],
     "reviewer": ["jobs/*/round-*/review-*.md"],
     "approver": ["jobs/*/decision.md"],
+    "surveyor": ["profiles/*.md"],
 }
 
 
@@ -723,6 +895,11 @@ def main(argv=None) -> None:
     s.add_argument("--force", action="store_true", help="overwrite an existing mf.config.json")
     s = sub.add_parser("doctor", help="check tools, config, repos and labels")
     s.add_argument("--checks", action="store_true", help="also run each target's checks on its base branch")
+
+    s = sub.add_parser("survey", help="learn each app: house-rules profiles, build facts, suggested issues")
+    s.add_argument("step", nargs="?", default="start", choices=["start", "next", "finish"])
+    s.add_argument("--targets", help="comma-separated targets; default all")
+    s.add_argument("--no-issues", action="store_true", help="finish without filing suggested issues")
 
     sub.add_parser("queue", help="one JSON line per labeled issue: start, resume, hold, wait or skip")
     s = sub.add_parser("new", help="create a job for a labeled issue")
@@ -765,6 +942,8 @@ def main(argv=None) -> None:
             setup.init(a)
         elif a.cmd == "doctor":
             sys.exit(setup.doctor(a.checks))
+        elif a.cmd == "survey":
+            survey(a.step, a.targets, a.no_issues)
         elif a.cmd == "queue":
             queue()
         elif a.cmd == "new":

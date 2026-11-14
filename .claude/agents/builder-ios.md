@@ -23,7 +23,9 @@ builders: you may read them, but never edit them.
 
 ## Read first
 
-1. The app's `CLAUDE.md` or `AGENTS.md`, and follow it.
+1. The ios house rules the brief lists (`profiles/ios.md`), if any, and the
+   app's `CLAUDE.md` or `AGENTS.md`. Follow them over your own taste. If a
+   rule looks wrong for this job, follow it anyway and say why in the Log.
 2. `<job folder>/spec.md`, your contract. Read Behaviour, Acceptance
    criteria, Accessibility identifiers, Strings and iOS notes in full.
 3. `<job folder>/flow.yaml` if it exists: the acceptance flow your build must

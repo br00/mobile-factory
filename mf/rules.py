@@ -153,6 +153,41 @@ def settle(track_stages: dict) -> str:
     return "review"
 
 
+# ---- Survey files -------------------------------------------------------------
+
+SUGGESTION_KINDS = ("parity", "factory", "quality", "feature")
+
+
+def parse_profile(text: str, target: str) -> dict:
+    h = header(text)
+    require(h.get("TARGET", "").lower() == target,
+            f"profiles/{target}.md must start with TARGET: {target}, not {h.get('TARGET') or 'nothing'!r}")
+    return h
+
+
+def parse_suggestions(text: str, known_targets: list) -> list:
+    """`## Suggestion: <title>` blocks, each with KIND / PLATFORMS / RISK lines and a body."""
+    out = []
+    blocks = re.split(r"^## Suggestion:[ \t]*", text, flags=re.M)[1:]
+    for block in blocks:
+        title, _, rest = block.partition("\n")
+        title = title.strip()
+        require(title, "a suggestion has no title")
+        rest = rest.lstrip("\n")
+        h = header(rest)
+        kind = h.get("KIND", "").lower()
+        require(kind in SUGGESTION_KINDS,
+                f"suggestion {title!r}: KIND must be one of {', '.join(SUGGESTION_KINDS)}, not {kind or 'missing'!r}")
+        risk = h.get("RISK", "").lower()
+        require(risk in RISKS, f"suggestion {title!r}: RISK must be one of {', '.join(RISKS)}")
+        platforms = targets_in(h.get("PLATFORMS"), known_targets, f"suggestion {title!r} PLATFORMS")
+        require(platforms, f"suggestion {title!r} must name PLATFORMS")
+        text_body = body(rest) if h else rest.strip()
+        require(text_body, f"suggestion {title!r} has no description")
+        out.append({"title": title, "kind": kind, "risk": risk, "platforms": platforms, "body": text_body})
+    return out
+
+
 def slug(title: str) -> str:
     words = re.findall(r"[a-z0-9]+", title.lower())[:5]
     return "-".join(words) or "issue"

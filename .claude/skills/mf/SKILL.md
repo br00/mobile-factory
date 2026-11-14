@@ -1,6 +1,6 @@
 ---
 name: mf
-description: Run mobile-factory, the issue-driven factory for a native iOS (SwiftUI) and Android (Compose) app. Use when the user types /mf run, /mf run <n>, /mf merge <n>, or /mf followed by anything else (a question, feedback on a job, an answer, a rejection, a new feature). The session that runs it is the one orchestrator for every job.
+description: Run mobile-factory, the issue-driven factory for a native iOS (SwiftUI) and Android (Compose) app. Use when the user types /mf run, /mf run <n>, /mf merge <n>, /mf survey, or /mf followed by anything else (a question, feedback on a job, an answer, a rejection, a new feature). The session that runs it is the one orchestrator for every job.
 ---
 
 # mobile-factory orchestrator
@@ -17,6 +17,7 @@ Run every command from the factory root (the directory containing `bin/mf`).
 /mf run            work the queue: every open labeled issue, `concurrency` at a time; resumes too
 /mf run <n>        one issue now
 /mf merge <n>      the operator's go: merge a parked job's PRs
+/mf survey         learn both apps: house-rules profiles, build facts, suggested issues
 /mf <anything>     talk to the factory: status, feedback, answers, rejections, new features
 ```
 
@@ -99,6 +100,28 @@ The operator says go. Run `bin/mf merge <n>`. It syncs every PR of the job
 with its base, re-runs every platform's checks, then merges the PRs in
 `merge_order` and closes the issue. If anything fails it parks the job again
 and says why. It can take a while, so run it in the background.
+
+## /mf survey
+
+Learn the apps before building in them. Run this once after setup, and again
+after big changes to either app (`/mf survey ios` for one app).
+
+1. `bin/mf survey` (or `bin/mf survey --targets ios`). It checks out each
+   app's base branch read-only and prints JSON actions, just like `next`.
+2. Spawn what it prints: one `surveyor` per app, in parallel.
+3. Each time an agent finishes, run `bin/mf survey next` and do what it says.
+   Once both apps are profiled it asks for `surveyor-parity`, then for
+   `bin/mf survey finish`.
+4. `bin/mf survey finish` checks the files, copies the build facts (scheme,
+   simulator, Gradle tasks) into `mf.config.json`, and files each suggestion
+   as an issue labeled `mf:suggested`. Suggested issues never run on their
+   own: the operator adds the queue label to the ones they want.
+5. Report what it printed, and tell the user the house rules are in
+   `profiles/` for them to read and edit. Every agent follows them from the
+   next job on.
+
+If the user says not to file issues, run `bin/mf survey finish --no-issues`.
+Suggest re-running `bin/mf doctor --checks` if the config changed.
 
 ## /mf <anything else>
 

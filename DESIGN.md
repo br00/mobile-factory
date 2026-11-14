@@ -81,6 +81,8 @@ actually changed.
 
 | agent | model | writes | notes |
 |---|---|---|---|
+| surveyor | opus | `profiles/<t>.md`, `profiles/<t>.suggestions.md` | run by `/mf survey`, not per job |
+| surveyor-parity | opus | `profiles/parity.md`, `profiles/parity.suggestions.md` | after both profiles exist |
 | intake | opus | `intake.md` | no shell; picks PLATFORMS, RISK, SURFACES |
 | spec-writer | opus | `spec.md`, `flow.yaml` | platform-neutral behaviour + per-platform notes |
 | builder-ios, builder-android | opus | code, `build-<t>.md` | resumed across rounds via SendMessage |
@@ -113,6 +115,36 @@ flow that selects elements only by those ids. iOS sets them with
 weaken their own acceptance test. Today builders run it themselves when
 Maestro is installed. The full gate (roadmap) will run it as part of the
 verdict.
+
+## Survey
+
+Without a survey, every agent works out "how does this app do things?" from
+scratch on every job. That costs tokens and gives inconsistent answers.
+`/mf survey` does that work once and writes it down:
+
+```
+bin/mf survey          detached worktrees of each base branch; prints spawn actions
+  surveyor ×N          profiles/<t>.md (house rules + build facts) and profiles/<t>.suggestions.md
+  surveyor-parity      profiles/parity.md (feature map, differences, shared vocabulary)
+                       and profiles/parity.suggestions.md
+bin/mf survey finish   validates, copies build facts into mf.config.json,
+                       files suggestions as `mf:suggested` issues, removes the worktrees
+```
+
+- **Profiles are documents for people too.** They're plain markdown in
+  `profiles/`, and the operator is expected to read and correct them. `brief()`
+  adds their paths to every agent's prompt. Builders follow them, and
+  reviewers treat breaking a house rule as a CHANGES finding. Builders can't
+  edit them (the `surveyor` write scope is `profiles/*.md`).
+- **Build facts** (`SCHEME`, `PROJECT`, `WORKSPACE`, `DESTINATION`,
+  `GRADLE_TASKS`) are header lines in the profile. `finish` copies any that
+  aren't `none` into `targets.<t>.env`, and prints each change.
+- **Suggestions are proposals, not work.** They're filed under a separate
+  label and never enter the queue. Adding the queue label is the human
+  decision that turns one into a job. A re-survey skips titles that are
+  already open.
+- `profiles/` is gitignored in the template, like `mf.config.json`. To share
+  house rules with your team, remove it from `.gitignore` in your fork.
 
 ## Gate
 
@@ -159,6 +191,10 @@ can't be hot-fixed, so a human go is the sensible default.
 
 ## Next
 
+- **New-app mode**: from a written brief, create both repos with projects
+  agents can edit safely (XcodeGen or Tuist, Gradle with a version catalog),
+  shared design tokens, CI and passing checks; write the first profiles from
+  that scaffold; then hand over to the normal pipeline.
 - **Device pool** (`bin/mf device lease|release`): clone a base simulator per
   job with `simctl clone`; run read-only emulator instances on separate
   ports. Leases are recorded per job and released on every park or finish.

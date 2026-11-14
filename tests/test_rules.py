@@ -120,5 +120,42 @@ class Moves(unittest.TestCase):
         self.assertEqual(rules.slug("Add Dark-mode toggle to Settings screen now"), "add-dark-mode-toggle-to")
 
 
+class Survey(unittest.TestCase):
+    SUGGESTIONS = (
+        "# Suggestions\n\nIntro text is ignored.\n\n"
+        "## Suggestion: Add pull-to-refresh to the iOS feed\n"
+        "KIND: parity\nPLATFORMS: ios\nRISK: low\n\n"
+        "Android refreshes the feed with a swipe (FeedScreen.kt); iOS can't.\n\n"
+        "## Suggestion: Convert to synchronized folders\n"
+        "KIND: factory\nPLATFORMS: ios\nRISK: medium\n\n"
+        "Every new file edits project.pbxproj.\n"
+    )
+
+    def test_parses_blocks(self):
+        s = rules.parse_suggestions(self.SUGGESTIONS, TARGETS)
+        self.assertEqual([x["title"] for x in s],
+                         ["Add pull-to-refresh to the iOS feed", "Convert to synchronized folders"])
+        self.assertEqual(s[0]["kind"], "parity")
+        self.assertEqual(s[0]["platforms"], ["ios"])
+        self.assertTrue(s[0]["body"].startswith("Android refreshes"))
+        self.assertEqual(s[1]["body"], "Every new file edits project.pbxproj.")
+
+    def test_none_is_fine(self):
+        self.assertEqual(rules.parse_suggestions("# Suggestions\n\nNothing worth filing.\n", TARGETS), [])
+
+    def test_bad_kind(self):
+        with self.assertRaises(Refused):
+            rules.parse_suggestions("## Suggestion: X\nKIND: vibes\nPLATFORMS: ios\nRISK: low\n\nBody\n", TARGETS)
+
+    def test_needs_body(self):
+        with self.assertRaises(Refused):
+            rules.parse_suggestions("## Suggestion: X\nKIND: quality\nPLATFORMS: ios\nRISK: low\n", TARGETS)
+
+    def test_profile_target(self):
+        self.assertEqual(rules.parse_profile("TARGET: ios\nSCHEME: App\n\n# x\n", "ios")["SCHEME"], "App")
+        with self.assertRaises(Refused):
+            rules.parse_profile("TARGET: android\n\n# x\n", "ios")
+
+
 if __name__ == "__main__":
     unittest.main()

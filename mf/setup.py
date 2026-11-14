@@ -15,6 +15,7 @@ LABELS = {
     "queue": ("0E8A16", "mobile-factory: build this"),
     "needs_info": ("FBCA04", "mobile-factory: waiting for the author"),
     "needs_human": ("D93F0B", "mobile-factory: waiting for the operator"),
+    "suggested": ("C5DEF5", "mobile-factory: suggested by the survey; add the queue label to build it"),
 }
 
 
@@ -44,7 +45,9 @@ def init(a) -> None:
     C.CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
     print(f"wrote {C.CONFIG_PATH}")
     for key, (color, desc) in LABELS.items():
-        name = cfg["labels"][key]
+        name = cfg["labels"].get(key)
+        if not name:
+            continue
         gh.gh("label", "create", name, "-R", a.issues, "--force", "--color", color, "--description", desc)
         print(f"label {name} ready in {a.issues}")
     print("\nnext:")
@@ -53,6 +56,7 @@ def init(a) -> None:
     if "android" in cfg["targets"]:
         print("  - set targets.android.env.MF_GRADLE_TASKS to your lint + unit test + build tasks")
     print("  - run bin/mf doctor --checks")
+    print("  - in Claude Code, run /mf survey so the factory learns both apps first")
 
 
 class Report:
@@ -148,6 +152,11 @@ def doctor(run_checks: bool) -> int:
             r.tool("java", why="a JDK is needed for Gradle")
             (r.ok if (clone / "gradlew").exists() else r.fail)("gradlew in the clone")
             r.tool("adb", needed=False, why="needed for the full gate on an emulator")
+        profile = C.PROFILES / f"{t}.md"
+        if profile.exists():
+            r.ok(f"house rules in profiles/{t}.md")
+        else:
+            r.warn(f"no profiles/{t}.md yet: run /mf survey so agents learn this app's conventions")
         if run_checks:
             run_base_checks(cfg, t, tc, clone, r)
     print()

@@ -28,7 +28,10 @@ the local path of each app's code. You write exactly one file,
    your files or your decision.
 2. Any `<job folder>/intake-*.md`: your earlier decisions. If one asked a
    question, the issue's conversation holds the answer.
-3. Each app's `CLAUDE.md` or `AGENTS.md`, then the code the request would
+3. The house rules and parity notes the brief lists (`profiles/<platform>.md`,
+   `profiles/parity.md`), if any. They summarise each app's architecture and
+   where the two apps already differ, so start there.
+4. Each app's `CLAUDE.md` or `AGENTS.md`, then the code the request would
    touch in each app. Read enough to judge scope, risk and whether the feature
    already exists.
 

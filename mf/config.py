@@ -15,6 +15,7 @@ EXAMPLE_PATH = ROOT / "mf.config.example.json"
 JOBS = HOME / "jobs"
 WORKTREES = HOME / ".worktrees"
 CACHE = HOME / ".cache"
+PROFILES = HOME / "profiles"
 
 # Every comment the factory posts starts with this, so it can tell its own
 # comments from people's.

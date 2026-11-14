@@ -37,6 +37,14 @@ def labeled_issues(repo: str, label: str) -> list:
                    "--limit", "200", "--json", "number,title")
 
 
+def create_issue(repo: str, title: str, text: str, label: str) -> str:
+    return gh("issue", "create", "-R", repo, "--title", title, "--body", text, "--label", label).strip()
+
+
+def ensure_label(repo: str, name: str, color: str, description: str) -> None:
+    gh("label", "create", name, "-R", repo, "--force", "--color", color, "--description", description)
+
+
 def comment(repo: str, number, text: str, marked: bool = True) -> None:
     gh("issue", "comment", number, "-R", repo, "--body", (MARKER + "\n" if marked else "") + text)
 
