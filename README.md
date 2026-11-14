@@ -21,48 +21,9 @@ hand you both PRs to merge together.
 
 ## The factory floor
 
-```mermaid
-flowchart LR
-    issue(["📝 GitHub issue<br/><code>mobile-factory</code> label"]) --> intake{{"🚪 intake<br/>worth building?"}}
-    intake -- "NEEDS-INFO" --> author(["💬 asks the author<br/>on the issue"])
-    author -. "reply" .-> intake
-    intake -- "REJECT" --> nope(["🚫 says why"])
-    intake -- "ACCEPT<br/>platforms · risk · surfaces" --> spec["📐 spec-writer<br/>spec.md + flow.yaml<br/><i>one contract, both apps</i>"]
-
-    spec --> bi
-    spec --> ba
-
-    subgraph ios ["🍎 iOS track"]
-        direction TB
-        bi["🛠️ builder-ios<br/>SwiftUI"] --> gi{"⚙️ gate<br/>lint · xcodebuild test"}
-        gi -- "fail" --> bi
-    end
-
-    subgraph android ["🤖 Android track"]
-        direction TB
-        ba["🛠️ builder-android<br/>Compose"] --> ga{"⚙️ gate<br/>gradle lint · test · build"}
-        ga -- "fail" --> ba
-    end
-
-    gi -- "pass" --> rev
-    ga -- "pass" --> rev
-
-    rev["🔍 reviewers in parallel<br/>code-ios · code-android · <b>parity</b><br/>+ ui · a11y · security · store"]
-    rev -- "CHANGES<br/>TARGETS: ios" --> bi
-    rev -- "CHANGES<br/>TARGETS: android" --> ba
-    rev -- "all PASS" --> appr{{"✅ approver"}}
-    appr -- "APPROVE / ESCALATE" --> you(["🙋 you try it<br/><code>/mf merge</code>"])
-    you --> merged(["🚀 paired merge<br/>iOS PR + Android PR"])
-
-    classDef iosC fill:#0A84FF22,stroke:#0A84FF,color:#0A84FF
-    classDef droidC fill:#3DDC8422,stroke:#22B86A,color:#16A34A
-    classDef agent fill:#F9731618,stroke:#F97316
-    classDef human fill:#A855F718,stroke:#A855F7
-    class bi,gi iosC
-    class ba,ga droidC
-    class intake,spec,rev,appr agent
-    class author,you human
-```
+<p align="center">
+  <img src="assets/flow.svg" alt="How mobile-factory works: issue, intake, spec, parallel iOS and Android tracks with their own gates, reviewers that send changes back to one side only, approver, you, paired merge" width="100%">
+</p>
 
 Every arrow is a decision made by one tested CLI, `bin/mf`, never by a prompt.
 Agents do the judgment calls; scripts decide the facts.

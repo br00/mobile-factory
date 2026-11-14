@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="990" viewBox="0 0 1200 990" role="img" aria-labelledby="t d">
+  <title id="t">How mobile-factory works</title>
+  <desc id="d">A GitHub issue goes to intake, then a spec writer. iOS and Android builders work in parallel, each checked by its own gate. Reviewers check both, send changes back to only the platform that needs them, then an approver hands both PRs to you to merge as a pair.</desc>
+  <defs>
+    <marker id="a-grey" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#94A3B8"/></marker>
+    <marker id="a-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#F87171"/></marker>
+    <marker id="a-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#60A5FA"/></marker>
+    <marker id="a-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4ADE80"/></marker>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1120"/><stop offset="1" stop-color="#151F3B"/>
+    </linearGradient>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .t { font-size: 22px; font-weight: 700; fill: #F8FAFC; }
+      .s { font-size: 16px; font-weight: 500; fill: #94A3B8; }
+      .m { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; fill: #CBD5E1; }
+      .lbl { font-size: 15px; font-weight: 700; }
+      .chip { font-size: 15px; font-weight: 600; }
+      .node { fill: #16213A; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="990" rx="24" fill="url(#bg)"/>
+
+  <!-- ===== Row 1: issue -> intake -> spec ===== -->
+  <rect class="node" x="50" y="50" width="260" height="100" rx="14" stroke="#475569"/>
+  <circle cx="86" cy="86" r="10" fill="none" stroke="#4ADE80" stroke-width="3"/><circle cx="86" cy="86" r="3" fill="#4ADE80"/>
+  <text class="t" x="106" y="94">GitHub issue</text>
+  <text class="s" x="74" y="126">labeled <tspan class="m">mobile-factory</tspan></text>
+
+  <rect class="node" x="470" y="50" width="260" height="100" rx="14" stroke="#F97316"/>
+  <text class="t" x="600" y="92" text-anchor="middle">intake</text>
+  <text class="s" x="600" y="122" text-anchor="middle">worth building? which apps?</text>
+
+  <rect class="node" x="890" y="50" width="260" height="100" rx="14" stroke="#F97316"/>
+  <text class="t" x="1020" y="88" text-anchor="middle">spec-writer</text>
+  <text class="m" x="1020" y="114" text-anchor="middle">spec.md + flow.yaml</text>
+  <text class="s" x="1020" y="137" text-anchor="middle">one contract, both apps</text>
+
+  <line x1="312" y1="100" x2="466" y2="100" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#a-grey)"/>
+  <line x1="732" y1="100" x2="886" y2="100" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#a-grey)"/>
+  <text class="lbl" x="809" y="88" text-anchor="middle" fill="#4ADE80">ACCEPT</text>
+
+  <!-- intake side exits -->
+  <path d="M560 150 V186" stroke="#64748B" stroke-width="2" fill="none" stroke-dasharray="5 5"/>
+  <path d="M640 150 V186" stroke="#64748B" stroke-width="2" fill="none" stroke-dasharray="5 5"/>
+  <rect x="402" y="186" width="190" height="34" rx="17" fill="#A855F7" fill-opacity="0.14" stroke="#A855F7" stroke-opacity="0.6"/>
+  <text class="chip" x="497" y="208" text-anchor="middle" fill="#D8B4FE">NEEDS-INFO · ask author</text>
+  <rect x="608" y="186" width="180" height="34" rx="17" fill="#64748B" fill-opacity="0.16" stroke="#64748B"/>
+  <text class="chip" x="698" y="208" text-anchor="middle" fill="#CBD5E1">REJECT · say why</text>
+
+  <!-- fork from spec to both tracks -->
+  <path d="M1020 152 V250 H315 V286" stroke="#94A3B8" stroke-width="2.5" fill="none" marker-end="url(#a-grey)"/>
+  <path d="M885 250 V286" stroke="#94A3B8" stroke-width="2.5" fill="none" marker-end="url(#a-grey)"/>
+  <text class="s" x="905" y="241" text-anchor="middle" fill="#CBD5E1">built in parallel</text>
+
+  <!-- ===== Row 2: the two tracks ===== -->
+  <!-- iOS -->
+  <rect x="50" y="290" width="530" height="270" rx="18" fill="#0A84FF" fill-opacity="0.08" stroke="#3B82F6" stroke-width="2"/>
+  <rect x="74" y="306" width="14" height="24" rx="4" fill="none" stroke="#60A5FA" stroke-width="2.5"/>
+  <text class="t" x="98" y="327" fill="#93C5FD">iOS track</text>
+  <text class="s" x="210" y="327">SwiftUI</text>
+
+  <rect class="node" x="80" y="350" width="200" height="100" rx="14" stroke="#60A5FA"/>
+  <text class="t" x="180" y="392" text-anchor="middle">builder-ios</text>
+  <text class="s" x="180" y="420" text-anchor="middle">code + unit tests + PR</text>
+
+  <rect class="node" x="350" y="350" width="200" height="100" rx="14" stroke="#60A5FA"/>
+  <text class="t" x="450" y="392" text-anchor="middle">gate</text>
+  <text class="s" x="450" y="420" text-anchor="middle">lint · xcodebuild test</text>
+
+  <line x1="282" y1="400" x2="346" y2="400" stroke="#60A5FA" stroke-width="2.5" marker-end="url(#a-blue)"/>
+  <path d="M450 452 V500 H180 V456" stroke="#F87171" stroke-width="2.5" fill="none" stroke-dasharray="7 6" marker-end="url(#a-red)"/>
+  <text class="lbl" x="315" y="525" text-anchor="middle" fill="#FCA5A5">fail: only iOS rebuilds</text>
+
+  <!-- Android -->
+  <rect x="620" y="290" width="530" height="270" rx="18" fill="#22C55E" fill-opacity="0.07" stroke="#22C55E" stroke-width="2"/>
+  <rect x="644" y="306" width="14" height="24" rx="3" fill="none" stroke="#4ADE80" stroke-width="2.5"/>
+  <text class="t" x="668" y="327" fill="#86EFAC">Android track</text>
+  <text class="s" x="822" y="327">Jetpack Compose</text>
+
+  <rect class="node" x="650" y="350" width="200" height="100" rx="14" stroke="#4ADE80"/>
+  <text class="t" x="750" y="392" text-anchor="middle">builder-android</text>
+  <text class="s" x="750" y="420" text-anchor="middle">code + unit tests + PR</text>
+
+  <rect class="node" x="920" y="350" width="200" height="100" rx="14" stroke="#4ADE80"/>
+  <text class="t" x="1020" y="392" text-anchor="middle">gate</text>
+  <text class="s" x="1020" y="420" text-anchor="middle">lint · test · assemble</text>
+
+  <line x1="852" y1="400" x2="916" y2="400" stroke="#4ADE80" stroke-width="2.5" marker-end="url(#a-green)"/>
+  <path d="M1020 452 V500 H750 V456" stroke="#F87171" stroke-width="2.5" fill="none" stroke-dasharray="7 6" marker-end="url(#a-red)"/>
+  <text class="lbl" x="885" y="525" text-anchor="middle" fill="#FCA5A5">fail: only Android rebuilds</text>
+
+  <!-- pass: both tracks into review -->
+  <path d="M315 562 V636" stroke="#60A5FA" stroke-width="2.5" fill="none" marker-end="url(#a-blue)"/>
+  <path d="M885 562 V636" stroke="#4ADE80" stroke-width="2.5" fill="none" marker-end="url(#a-green)"/>
+  <text class="lbl" x="327" y="604" fill="#93C5FD">pass</text>
+  <text class="lbl" x="897" y="604" fill="#86EFAC">pass</text>
+
+  <!-- ===== Row 3: reviewers ===== -->
+  <rect class="node" x="200" y="640" width="800" height="130" rx="16" stroke="#F97316"/>
+  <text class="t" x="600" y="680" text-anchor="middle">reviewers, in parallel</text>
+  <g class="chip">
+    <rect x="232" y="706" width="100" height="34" rx="17" fill="#0A84FF" fill-opacity="0.2" stroke="#60A5FA"/>
+    <text x="282" y="728" text-anchor="middle" fill="#93C5FD">code-ios</text>
+    <rect x="342" y="706" width="134" height="34" rx="17" fill="#22C55E" fill-opacity="0.18" stroke="#4ADE80"/>
+    <text x="409" y="728" text-anchor="middle" fill="#86EFAC">code-android</text>
+    <rect x="486" y="706" width="88" height="34" rx="17" fill="#F8FAFC" fill-opacity="0.12" stroke="#F8FAFC"/>
+    <text x="530" y="728" text-anchor="middle" fill="#F8FAFC">parity</text>
+    <rect x="584" y="706" width="58" height="34" rx="17" fill="#64748B" fill-opacity="0.2" stroke="#64748B"/>
+    <text x="613" y="728" text-anchor="middle" fill="#CBD5E1">ui</text>
+    <rect x="652" y="706" width="70" height="34" rx="17" fill="#64748B" fill-opacity="0.2" stroke="#64748B"/>
+    <text x="687" y="728" text-anchor="middle" fill="#CBD5E1">a11y</text>
+    <rect x="732" y="706" width="104" height="34" rx="17" fill="#64748B" fill-opacity="0.2" stroke="#64748B"/>
+    <text x="784" y="728" text-anchor="middle" fill="#CBD5E1">security</text>
+    <rect x="846" y="706" width="122" height="34" rx="17" fill="#64748B" fill-opacity="0.2" stroke="#64748B"/>
+    <text x="907" y="728" text-anchor="middle" fill="#CBD5E1">store policy</text>
+  </g>
+  <text class="s" x="600" y="760" text-anchor="middle" font-size="14">grey reviewers run only when the change calls for them</text>
+
+  <!-- changes go back to the named side only -->
+  <path d="M198 705 H25 V425 H76" stroke="#F87171" stroke-width="2.5" fill="none" stroke-dasharray="7 6" marker-end="url(#a-red)"/>
+  <path d="M1002 705 H1175 V425 H1124" stroke="#F87171" stroke-width="2.5" fill="none" stroke-dasharray="7 6" marker-end="url(#a-red)"/>
+  <text class="lbl" transform="translate(17 600) rotate(-90)" text-anchor="middle" fill="#FCA5A5">CHANGES · TARGETS: ios</text>
+  <text class="lbl" transform="translate(1189 600) rotate(90)" text-anchor="middle" fill="#FCA5A5">CHANGES · TARGETS: android</text>
+
+  <!-- ===== Row 4: approver -> you -> merge ===== -->
+  <path d="M600 772 V806 H300 V836" stroke="#94A3B8" stroke-width="2.5" fill="none" marker-end="url(#a-grey)"/>
+  <text class="lbl" x="612" y="798" fill="#4ADE80">all PASS</text>
+
+  <rect class="node" x="170" y="840" width="260" height="100" rx="14" stroke="#F97316"/>
+  <text class="t" x="300" y="882" text-anchor="middle">approver</text>
+  <text class="s" x="300" y="910" text-anchor="middle">APPROVE or ESCALATE</text>
+
+  <rect class="node" x="470" y="840" width="260" height="100" rx="14" stroke="#A855F7"/>
+  <text class="t" x="600" y="882" text-anchor="middle">you</text>
+  <text class="s" x="600" y="910" text-anchor="middle">try it, then <tspan class="m">/mf merge</tspan></text>
+
+  <rect x="770" y="840" width="260" height="100" rx="14" fill="#16213A" stroke-width="2" stroke="#4ADE80"/>
+  <rect x="770" y="840" width="260" height="100" rx="14" fill="#22C55E" fill-opacity="0.08"/>
+  <text class="t" x="900" y="882" text-anchor="middle">paired merge</text>
+  <text class="s" x="900" y="910" text-anchor="middle">iOS PR + Android PR</text>
+
+  <line x1="432" y1="890" x2="466" y2="890" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#a-grey)"/>
+  <line x1="732" y1="890" x2="766" y2="890" stroke="#94A3B8" stroke-width="2.5" marker-end="url(#a-grey)"/>
+</svg>
