@@ -50,7 +50,8 @@ class Pipeline(unittest.TestCase):
             seed = self.tmp / f"seed-{t}"
             sh("git", "clone", "-q", str(bare), str(seed))
             (seed / "README.md").write_text(f"{t} app\n")
-            sh("git", "add", "README.md", cwd=seed)
+            (seed / ".gitignore").write_text("build/\n")
+            sh("git", "add", "README.md", ".gitignore", cwd=seed)
             sh("git", "commit", "-qm", "init", cwd=seed)
             sh("git", "push", "-q", "origin", "HEAD:main", cwd=seed)
             sh("git", "clone", "-q", str(bare), str(self.home / f"app-{t}"))
@@ -165,7 +166,12 @@ class Pipeline(unittest.TestCase):
         self.build(job, "ios", 1, {"Dark.swift": "// ok\n"}, pr=True)
         self.build(job, "android", 1, {"Dark.kt": "// ok\n", "BROKEN": "x"}, pr=True)
         self.do(self.next(job))  # after build x2
+        # a builder's leftover build output (ignored by git) must not reach the gate
+        stale = Path(self.job(job)["tracks"]["ios"]["worktree"]) / "build" / "stale-test-results.xml"
+        stale.parent.mkdir()
+        stale.write_text("<passed/>")
         self.do(self.next(job))  # gate x2
+        self.assertFalse(stale.exists())
         j = self.job(job)
         self.assertEqual(j["tracks"]["ios"]["stage"], "passed")
         self.assertEqual(j["tracks"]["android"]["stage"], "build")
@@ -322,6 +328,7 @@ class Pipeline(unittest.TestCase):
         self.assertEqual(cfg["targets"]["ios"]["env"]["MF_SCHEME"], "Shop")
         self.assertEqual(cfg["targets"]["ios"]["env"]["MF_PROJECT"], "Shop.xcodeproj")
         self.assertEqual(cfg["targets"]["ios"]["env"]["MF_WORKSPACE"], "")  # "none" isn't copied
+        self.assertEqual(cfg["targets"]["ios"]["env"]["MF_DESTINATION"], "")  # simulators stay automatic
         self.assertEqual(cfg["targets"]["android"]["env"]["MF_GRADLE_TASKS"],
                          "ktlintCheck testDebugUnitTest assembleDebug")
         issues = self.gh()["issues"]["acme/product"]

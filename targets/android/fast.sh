@@ -22,6 +22,12 @@ set -euo pipefail
 : "${MF_GRADLE_TASKS:=lintDebug testDebugUnitTest assembleDebug}"
 : "${MF_CACHE:=$(mktemp -d)}"
 
+# A fresh worktree has no local.properties (it's gitignored), so Gradle can
+# only find the SDK through ANDROID_HOME. Fall back to Android Studio's default.
+if [[ -z "${ANDROID_HOME:-}" ]]; then
+  export ANDROID_HOME="${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}"
+fi
+
 if [[ ! -x ./gradlew ]]; then
   echo "no executable ./gradlew in $PWD" >&2
   exit 1

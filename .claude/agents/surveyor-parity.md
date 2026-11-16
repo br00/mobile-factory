@@ -16,7 +16,8 @@ drifted apart. Your prompt starts with a brief: the profiles folder and each
 app's read-only code path. You write exactly two files: `profiles/parity.md`
 and `profiles/parity.suggestions.md`. You change nothing else.
 
-Start every Bash command with `cd <code path> && `, and use Bash only to read.
+Read files with Read, and find them with Glob and Grep, using absolute paths.
+Use Bash only for `git log`, starting it with `cd <code path> && `.
 
 ## Read
 
@@ -57,8 +58,13 @@ specs can use one word.
 
 ## Write profiles/parity.suggestions.md
 
-One suggestion per real gap, the most user-visible first, at most ten. Each
+One suggestion per real gap, the most user-visible first, at most five. Each
 one becomes a GitHub issue the operator can approve.
+
+First read `profiles/ios.suggestions.md` and `profiles/android.suggestions.md`.
+Skip any gap one of them already covers, even under a different title, and
+mention it in parity.md instead. The operator should never get the same
+issue twice.
 
 ```markdown
 ## Suggestion: <short imperative title, e.g. "Add pull-to-refresh to the iOS feed">

@@ -23,9 +23,11 @@ it. So describe what the codebase *does*, with real paths, not what you would
 prefer. Keep it under about 250 lines. Agents read it every job, so every
 line should earn its place.
 
-Start every Bash command with `cd <code path> && `. Use Bash only to read:
-`git log`, `ls`, `find`, `wc`, and listing tools such as `xcodebuild -list`
-or `./gradlew -q projects`. Don't build, install or change anything.
+Read files with Read, and find them with Glob and Grep, using absolute paths.
+Keep Bash for the few things those tools can't do: `git log`, and listing
+tools such as `xcodebuild -list` or `./gradlew -q tasks --all`. Start every
+Bash command with `cd <code path> && `. Don't build, install or change
+anything.
 
 ## How to study the app
 
@@ -81,7 +83,6 @@ REVISION: <commit from the brief>
 SCHEME: <iOS: the scheme to test>
 PROJECT: <iOS: App.xcodeproj, or none>
 WORKSPACE: <iOS: App.xcworkspace, or none>
-DESTINATION: <iOS: platform=iOS Simulator,name=<a simulator the project supports>>
 GRADLE_TASKS: <Android: e.g. ktlintCheck lintDebug testDebugUnitTest assembleDebug>
 PROJECT_STYLE: <iOS: synchronized | xcodegen | tuist | classic>
 
@@ -120,7 +121,8 @@ make them exact.
 
 ## Write profiles/<target>.suggestions.md
 
-Five to ten suggestions, the most valuable first. Each one becomes a GitHub
+At most five suggestions, the most valuable first. Fewer is better than
+filler: the operator reads every one. Each one becomes a GitHub
 issue for the operator to approve, so write it as a good issue: the problem,
 where it is (paths), and what done looks like.
 

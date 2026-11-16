@@ -14,15 +14,18 @@
 #   MF_SCHEME        the scheme to test (required)
 #   MF_PROJECT       App.xcodeproj, or
 #   MF_WORKSPACE     App.xcworkspace (wins when both are set)
-#   MF_DESTINATION   e.g. "platform=iOS Simulator,name=iPhone 16"
+#   MF_DESTINATION   e.g. "platform=iOS Simulator,name=iPhone 15"; leave it
+#                    empty to use the newest available iPhone simulator
 #
 # Rules: non-interactive, deterministic, and never rewrite files (no --fix,
 # no autoformat). Edit freely to match your app; this is the iOS gate.
 set -euo pipefail
 
 : "${MF_SCHEME:?set targets.ios.env.MF_SCHEME in mf.config.json}"
-: "${MF_DESTINATION:=platform=iOS Simulator,name=iPhone 16}"
 : "${MF_CACHE:=$(mktemp -d)}"
+if [[ -z "${MF_DESTINATION:-}" ]]; then
+  MF_DESTINATION="$("${MF_ROOT:?}/bin/mf" simulator)"
+fi
 
 container=()
 if [[ -n "${MF_WORKSPACE:-}" ]]; then

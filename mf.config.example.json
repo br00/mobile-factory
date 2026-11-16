@@ -23,7 +23,7 @@
         "MF_SCHEME": "App",
         "MF_PROJECT": "App.xcodeproj",
         "MF_WORKSPACE": "",
-        "MF_DESTINATION": "platform=iOS Simulator,name=iPhone 16"
+        "MF_DESTINATION": ""
       },
       "protected_paths": [
         "*.entitlements",

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
 
-from .config import CACHE, checks_script
+from .config import CACHE, ROOT, checks_script
 from .util import require, run
 
 TAIL = 60
@@ -28,14 +29,25 @@ def protected_changes(worktree: str, base: str, patterns: list) -> list:
     return hits
 
 
-def execute(target_cfg: dict, target: str, worktree: str, cache: Path, job_id: str = "") -> dict:
-    """Run the target's checks script from the factory repo inside `worktree`."""
+def execute(target_cfg: dict, target: str, worktree: str, cache: Path, job_id: str = "",
+            fresh: bool = False) -> dict:
+    """Run the target's checks script from the factory repo inside `worktree`.
+
+    `fresh` is for verdicts (the gate, the pre-merge check, doctor): it deletes
+    ignored and untracked files in the worktree first, so nothing a builder
+    left behind (build outputs, up-to-date markers, test results) is reused.
+    Builders' own `mf check` runs stay incremental.
+    """
     script = checks_script(target_cfg)
     require(script.exists(), f"{target}: checks script {script} doesn't exist")
+    if fresh:
+        shutil.rmtree(cache, ignore_errors=True)
+        run(["git", "clean", "-fdxq"], cwd=worktree)
     cache.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     env.update({k: str(v) for k, v in target_cfg.get("env", {}).items()})
-    env.update(MF_WORKTREE=str(worktree), MF_CACHE=str(cache), MF_TARGET=target, MF_JOB=job_id)
+    env.update(MF_WORKTREE=str(worktree), MF_CACHE=str(cache), MF_TARGET=target, MF_JOB=job_id,
+               MF_ROOT=str(ROOT))
     commit = run(["git", "rev-parse", "HEAD"], cwd=worktree).stdout.strip()
     protected = protected_changes(worktree, target_cfg["base"], target_cfg.get("protected_paths", []))
     start = time.monotonic()
@@ -50,8 +62,9 @@ def execute(target_cfg: dict, target: str, worktree: str, cache: Path, job_id: s
     }
 
 
-def job_cache(job_id: str, target: str) -> Path:
-    return CACHE / job_id / target
+def job_cache(job_id: str, target: str, purpose: str = "check") -> Path:
+    """Builders' checks and verdicts get separate caches, so a verdict never reuses a builder's build."""
+    return CACHE / job_id / target / purpose
 
 
 def summary_line(target: str, name: str, r: dict) -> str:

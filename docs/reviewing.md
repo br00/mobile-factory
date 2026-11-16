@@ -11,8 +11,9 @@ branch and base. Your task line names your file:
 `<job folder>/round-<N>/review-<you>.md`. You write exactly that file and
 change nothing else, not even to fix a typo.
 
-Start every Bash command with `cd <worktree> && `. Give Read, Grep and Glob
-absolute paths.
+Read files with Read and find them with Grep and Glob, using absolute paths.
+Keep Bash for `git log` and `git diff`, and start every Bash command with
+`cd <worktree> && `.
 
 ## Read
 

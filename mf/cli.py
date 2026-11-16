@@ -395,7 +395,8 @@ def gate(job_id: str, target: str) -> None:
     jobs.unlock(job.id)  # checks take minutes; don't hold the job meanwhile
 
     tc = cfg()["targets"][target]
-    result = checks.execute(tc, target, tr["worktree"], checks.job_cache(job.id, target), job.id)
+    result = checks.execute(tc, target, tr["worktree"], checks.job_cache(job.id, target, "gate"), job.id,
+                            fresh=True)
     name = f"gate-{target}-{attempt}"
 
     job = jobs.load(job_id)
@@ -506,7 +507,8 @@ def merge(job: jobs.Job) -> None:
         if res.returncode != 0:
             run(["git", "merge", "--abort"], cwd=wt, check=False)
             return stop(f"The {t} branch conflicts with {base}:\n\n```\n{res.stdout.strip()}\n```")
-        result = checks.execute(cfg()["targets"][t], t, wt, checks.job_cache(job.id, t), job.id)
+        result = checks.execute(cfg()["targets"][t], t, wt, checks.job_cache(job.id, t, "gate"), job.id,
+                                fresh=True)
         checks.write_report(job.round_dir(), f"merge-{t}", t, result, note=f"synced with {base}")
         if not result["ok"]:
             return stop(f"The {t} branch fails its checks after syncing with {base}. "
@@ -686,9 +688,10 @@ def check(job: jobs.Job, target: str) -> None:
 
 SURVEY_STATE = C.PROFILES / ".survey.json"
 # Build facts a profile reports, and the checks-script variable each one fills in.
+# The simulator is deliberately not one of them: names are machine-specific and
+# often ambiguous, and `bin/mf simulator` picks a valid one on every run.
 FACTS = {
-    "ios": {"SCHEME": "MF_SCHEME", "PROJECT": "MF_PROJECT", "WORKSPACE": "MF_WORKSPACE",
-            "DESTINATION": "MF_DESTINATION"},
+    "ios": {"SCHEME": "MF_SCHEME", "PROJECT": "MF_PROJECT", "WORKSPACE": "MF_WORKSPACE"},
     "android": {"GRADLE_TASKS": "MF_GRADLE_TASKS"},
 }
 EMPTY_FACT = {"", "none", "-", "n/a", "unknown"}
@@ -929,6 +932,7 @@ def main(argv=None) -> None:
     s = sub.add_parser("reject", help="drop a parked job (reason on stdin)")
     s.add_argument("job")
 
+    sub.add_parser("simulator", help="print an xcodebuild destination for the newest available iPhone simulator")
     s = sub.add_parser("check", help="run a track's checks without recording a verdict (for builders)")
     s.add_argument("job")
     s.add_argument("target")
@@ -942,6 +946,8 @@ def main(argv=None) -> None:
             setup.init(a)
         elif a.cmd == "doctor":
             sys.exit(setup.doctor(a.checks))
+        elif a.cmd == "simulator":
+            print(setup.default_destination())
         elif a.cmd == "survey":
             survey(a.step, a.targets, a.no_issues)
         elif a.cmd == "queue":

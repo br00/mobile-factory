@@ -136,8 +136,10 @@ bin/mf survey finish   validates, copies build facts into mf.config.json,
   adds their paths to every agent's prompt. Builders follow them, and
   reviewers treat breaking a house rule as a CHANGES finding. Builders can't
   edit them (the `surveyor` write scope is `profiles/*.md`).
-- **Build facts** (`SCHEME`, `PROJECT`, `WORKSPACE`, `DESTINATION`,
-  `GRADLE_TASKS`) are header lines in the profile. `finish` copies any that
+- **Build facts** (`SCHEME`, `PROJECT`, `WORKSPACE`, `GRADLE_TASKS`) are
+  header lines in the profile. The simulator isn't one: names are
+  machine-specific and often ambiguous, so `bin/mf simulator` picks one on
+  every run. `finish` copies any that
   aren't `none` into `targets.<t>.env`, and prints each change.
 - **Suggestions are proposals, not work.** They're filed under a separate
   label and never enter the queue. Adding the queue label is the human
